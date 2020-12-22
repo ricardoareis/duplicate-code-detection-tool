@@ -32,12 +32,12 @@ class CliColors:
 def main():
     parser_description = CliColors.HEADER + CliColors.BOLD + \
         "=== Duplicate Code Detection Tool ===" + CliColors.ENDC
-    group = argparse.ArgumentParser(description=parser_description)
-    group.add_argument("-s", "--similarity",
+    parser = argparse.ArgumentParser(description=parser_description)
+    parser.add_argument("-s", "--similarity",
                        help="Filter all similarities above than")
-    group.add_argument("-d", "--directory",
+    parser.add_argument("-d", "--directory",
                        help="Check for similarities between all files of the specified directory.")
-    group.add_argument('-f', "--files", nargs="+", help="Check for similarities between specified files. \
+    parser.add_argument('-f', "--files", nargs="+", help="Check for similarities between specified files. \
                         The more files are supplied the more accurate are the results.")
     args = parser.parse_args()
 
