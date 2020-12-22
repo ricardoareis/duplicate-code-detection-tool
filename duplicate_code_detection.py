@@ -32,8 +32,9 @@ class CliColors:
 def main():
     parser_description = CliColors.HEADER + CliColors.BOLD + \
         "=== Duplicate Code Detection Tool ===" + CliColors.ENDC
-    parser = argparse.ArgumentParser(description=parser_description)
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = argparse.ArgumentParser(description=parser_description)
+    group.add_argument("-s", "--similarity",
+                       help="Filter all similarities above than")
     group.add_argument("-d", "--directory",
                        help="Check for similarities between all files of the specified directory.")
     group.add_argument('-f', "--files", nargs="+", help="Check for similarities between specified files. \
@@ -86,11 +87,11 @@ def main():
         query_doc_bow = dictionary.doc2bow(query_doc)
         query_doc_tf_idf = tf_idf[query_doc_bow]
 
-        print("\n\n\n" + CliColors.HEADER +
-              "Code duplication probability for " + source_file + CliColors.ENDC)
+        print("\n\n\n" +
+              "Code duplication probability for " + source_file)
         print("-" * (largest_string_length + similarity_label_length))
-        print(CliColors.BOLD + "%s %s" %
-              (file_column_label.center(largest_string_length), similarity_column_label) + CliColors.ENDC)
+        print("%s %s" %
+              (file_column_label.center(largest_string_length), similarity_column_label))
         print("-" * (largest_string_length + similarity_label_length))
 
         for similarity, source in zip(sims[query_doc_tf_idf], source_code):
@@ -100,8 +101,10 @@ def main():
             similarity_percentage = similarity * 100
             color = CliColors.OKGREEN if similarity_percentage < 10 else (
                 CliColors.WARNING if similarity_percentage < 20 else CliColors.FAIL)
-            print("%s     " % (source.ljust(largest_string_length)) +
-                  color + "%.2f" % (similarity_percentage) + CliColors.ENDC)
+
+            if args.similarity and similarity_percentage >= int(args.similarity):
+                print("%s     " % (source.ljust(largest_string_length)) +
+                    "%.2f" % (similarity_percentage))
 
 
 if __name__ == "__main__":
