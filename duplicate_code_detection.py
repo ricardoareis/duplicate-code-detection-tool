@@ -12,10 +12,14 @@ import tempfile
 from nltk.tokenize import word_tokenize
 from collections import OrderedDict
 
+from collections import defaultdict
+from decimal import Decimal
+
 source_code_file_extensions = [".c", ".cpp", ".cc", ".java", ".py", ".cs"]
 file_column_label = "File"
 similarity_column_label = "Similarity (%)"
 similarity_label_length = len(similarity_column_label)
+TWOPLACES = Decimal(10) ** -2       # same as Decimal('0.01')
 
 
 class CliColors:
@@ -43,14 +47,17 @@ def main():
 
     # Determine which files to compare for similarities
     source_code_files = list()
+
     if args.directory:
         if not os.path.isdir(args.directory):
             print("Path does not exist or is not a directory:", args.directory)
             sys.exit(1)
         # Get a list with all the source code files within the directory
+
         for dirpath, _, filenames in os.walk(args.directory):
             for name in filenames:
                 _, file_extension = os.path.splitext(name)
+
                 if file_extension in source_code_file_extensions:
                     filename = os.path.join(dirpath, name)
                     source_code_files.append(filename)
@@ -58,6 +65,7 @@ def main():
         if len(args.files) < 2:
             print("Too few files to compare, you need to supply at least 2")
             sys.exit(1)
+
         for supplied_file in args.files:
             if not os.path.isfile(supplied_file):
                 print("Supplied file does not exist:", supplied_file)
@@ -66,6 +74,7 @@ def main():
 
     # Parse the contents of all the source files
     source_code = OrderedDict()
+
     for source_code_file in source_code_files:
         with open(source_code_file, 'r') as f:
             # Store source code with the file path as the key
@@ -81,30 +90,31 @@ def main():
                                           num_features=len(dictionary))
 
     largest_string_length = len(max(source_code_files, key=len))
+
+    d = defaultdict(list)
+
     for source_file in source_code:
+
         # Check for similarities
         query_doc = [w.lower() for w in word_tokenize(source_code[source_file])]
         query_doc_bow = dictionary.doc2bow(query_doc)
         query_doc_tf_idf = tf_idf[query_doc_bow]
 
-        print("\n\n\n" +
-              "Code duplication probability for " + source_file)
-        print("-" * (largest_string_length + similarity_label_length))
-        print("%s %s" %
-              (file_column_label.center(largest_string_length), similarity_column_label))
-        print("-" * (largest_string_length + similarity_label_length))
-
         for similarity, source in zip(sims[query_doc_tf_idf], source_code):
+
             # Ignore similarities for the same file
             if source == source_file:
                 continue
+
             similarity_percentage = similarity * 100
-            color = CliColors.OKGREEN if similarity_percentage < 10 else (
-                CliColors.WARNING if similarity_percentage < 20 else CliColors.FAIL)
 
             if args.similarity and similarity_percentage >= int(args.similarity):
-                print("%s     " % (source.ljust(largest_string_length)) +
-                    "%.2f" % (similarity_percentage))
+                print(f"{source_file} {source.ljust(largest_string_length)} {similarity_percentage:.2f}")
+                d[source_file].append(similarity_percentage)
+
+        if d[source_file]:
+            average_of_similarity = sum(d[source_file])/len(d[source_file])
+            print(f"{source_file} {Decimal(average_of_similarity).quantize(TWOPLACES)}")
 
 
 if __name__ == "__main__":
